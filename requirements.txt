@@ -1,0 +1,3 @@
+# DreamsGuider & Sarvaj Edtech Pvt. Ltd.
+# Python Backend Dependencies for Render Deployment
+# This server utilizes standard Python library modules (http.server, json, csv, urllib)
