@@ -12,6 +12,18 @@
 // Example: const GOOGLE_SHEET_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycb.../exec";
 const GOOGLE_SHEET_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbwi9N4UQ10E6MjMJvcnmUETziPwjcgNjavfs7Vtd5Ie601M8tr_NQbNDjmJqqa4dC12Ig/exec";
 
+// Render Backend API URL (Render वर Python सर्व्हर होस्ट केल्यावर मिळालेली लिंक इथे टाका)
+// Example: const RENDER_BACKEND_URL = "https://dreamsguider-api.onrender.com";
+const RENDER_BACKEND_URL = "https://internshipcandidatenov2026.onrender.com";
+
+function getApiUrl(path) {
+  const backend = RENDER_BACKEND_URL || localStorage.getItem("dg_render_backend_url") || "";
+  if (backend && backend.trim() !== "") {
+    return backend.replace(/\/+$/, "") + path;
+  }
+  return path;
+}
+
 // UPI & Official Contact Configuration
 const DEFAULT_UPI_ID = "9373346490-2@ybl";
 const UPI_PAYEE_NAME = "DreamsGuider Sarvaj Edtech";
@@ -214,12 +226,20 @@ let activePhase = "all";
 let pendingCandidateData = null; // Stored when form is submitted, updated on payment
 
 document.addEventListener("DOMContentLoaded", () => {
-  // Check for webhook URL in query parameters (e.g. ?webhook=https://script.google.com/...)
   const urlParams = new URLSearchParams(window.location.search);
+  
+  // Check for webhook URL in query parameters (e.g. ?webhook=https://script.google.com/...)
   const webhookParam = urlParams.get("webhook");
   if (webhookParam) {
     localStorage.setItem("dg_google_webhook_url", webhookParam);
     console.log("Google Apps Script Webhook configured from URL parameter.");
+  }
+
+  // Check for Render Backend URL in query parameters (e.g. ?backend=https://...onrender.com)
+  const backendParam = urlParams.get("backend");
+  if (backendParam) {
+    localStorage.setItem("dg_render_backend_url", backendParam);
+    console.log("Render Backend URL configured from URL parameter.");
   }
 
   setupMobileNavigation();
@@ -537,13 +557,13 @@ function setupFormListeners() {
     // 1. Immediately persist Stage 1 to localStorage
     saveToLocalStorage(pendingCandidateData);
 
-    // 2. Immediately save Stage 1 to local server database & CSV
-    fetch("/api/register", {
+    // 2. Immediately save Stage 1 to server database & CSV (Local or Render)
+    fetch(getApiUrl("/api/register"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(pendingCandidateData)
     }).catch(() => {
-      // Local backend offline or standalone
+      // Backend offline or standalone
     });
 
     // 3. Immediately send Stage 1 to Google Sheet (shows "No (Pending Payment)")
@@ -653,15 +673,15 @@ window.verifyAndCompletePayment = async function() {
     console.error("LocalStorage save error:", err);
   }
 
-  // 2. Save to Local Python Server (registrations.csv & registrations.json)
+  // 2. Save to Python Server (registrations.csv & registrations.json on Local or Render)
   try {
-    await fetch("/api/register", {
+    await fetch(getApiUrl("/api/register"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(pendingCandidateData)
     });
   } catch (e) {
-    console.log("Local backend server offline or standalone mode.");
+    console.log("Backend server offline or standalone mode.");
   }
 
   // 3. Update Record in Google Sheet (switches Enrolled to "Yes (Enrolled)")
